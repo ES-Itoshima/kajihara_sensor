@@ -3,18 +3,15 @@
 #include "ArtNet/ArtNetWifi.h"
 #include "config.h"
 
-#define DEVICE_NAME "laika-receiver"
+#define DEVICE_NAME "sensor_sender"
 #define UNIVERSE 0
 
-#define MAX_CHANNELS 100
+#define MAX_CHANNELS 4
 #define LED 2
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-ArtnetWiFiReceiver artnet;
-uint8_t channelVals[MAX_CHANNELS];
-
-uint8_t receivePacketsCount = 0;
+ArtnetWiFiSender artnet;
 
 int trigPin = D1;    // Trigger
 int echoPin = D2;    // Echo
@@ -22,7 +19,6 @@ long duration, cm, inches;
 
 void setup()
 {
-
   // シリアルポート
   Serial.begin(115200);
 
@@ -45,18 +41,14 @@ void setup()
   Serial.println(" IP=" + WiFi.localIP().toString());
 
   artnet.begin();
-  artnet.subscribe(UNIVERSE, onArtnet);
-  artnet.shortname(DEVICE_NAME);
-  artnet.longname(DEVICE_NAME);
-  artnet.nodereport("working!");
 
   // DMX出力
   Serial1.begin(250000, SERIAL_8N2);
   pinMode(LED, OUTPUT);
 
-    //Serial Port begin
-  Serial.begin (9600);
-  //Define inputs and outputs
+  // Serial Port begin
+  Serial.begin(9600);
+  // Define inputs and outputs
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 }
@@ -69,8 +61,6 @@ void loop()
     delay(100);
     ESP.restart();
   }
-
-  artnet.parse();
 
   Serial1.flush();
   Serial1.begin(90000, SERIAL_8N2);
@@ -86,11 +76,7 @@ void loop()
     Serial1.read();
   Serial1.write(0); // Start Code
 
-  for (uint8_t i = 0; i < MAX_CHANNELS; i++)
-  {
-    Serial1.write(channelVals[i]);
-  }
-   digitalWrite(trigPin, LOW);
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(5);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
@@ -103,29 +89,21 @@ void loop()
   duration = pulseIn(echoPin, HIGH);
  
   // Convert the time into a distance
-  cm = (duration/2) / 29.1;     // Divide by 29.1 or multiply by 0.0343
-  inches = (duration/2) / 74;   // Divide by 74 or multiply by 0.0135
+  cm = (duration / 2) / 29.1;     // Divide by 29.1 or multiply by 0.0343
+  inches = (duration / 2) / 74;   // Divide by 74 or multiply by 0.0135
   
   Serial.print(inches);
   Serial.print("in, ");
   Serial.print(cm);
   Serial.print("cm");
   Serial.println();
-}
 
-void onArtnet(const uint8_t *data, const uint16_t size)
-{
-  receivePacketsCount++;
-  if (receivePacketsCount > 50)
-  {
-    Serial.println();
-    Serial.print("Packets are comming (" + WiFi.localIP().toString() + "): ");
-    receivePacketsCount = 0;
-  }
-  Serial.print(".");
+  uint8_t data[MAX_CHANNELS] = {0};
+  data[0] = cm & 0xFF;            // Lower 8 bits of cm
+  data[1] = (cm >> 8) & 0xFF;     // Upper 8 bits of cm
+  data[2] = inches & 0xFF;        // Lower 8 bits of inches
+  data[3] = (inches >> 8) & 0xFF; // Upper 8 bits of inches
 
-  for (size_t i = 0; i < MIN(size, MAX_CHANNELS); ++i)
-  {
-    channelVals[i] = data[i];
-  }
+  // 修正: sendArtDmxメソッドの使用
+  artnet.send("255.255.255.255", UNIVERSE, data, MAX_CHANNELS);
 }
