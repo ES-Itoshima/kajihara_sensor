@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "artnet": "^1.4.0",
+    "socket.io": "^4.7.5",
     "vue": "^3.4.21"
   },
   "devDependencies": {

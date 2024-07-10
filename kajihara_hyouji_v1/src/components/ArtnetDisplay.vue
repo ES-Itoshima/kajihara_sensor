@@ -1,62 +1,63 @@
-<!-- src/components/ArtnetDisplay.vue -->
-<template>
-    <div>
-      <h1>センサーデータ</h1>
-      <p>距離: {{ distanceInCm }} cm</p>
-      <p>距離: {{ distanceInInches }} inches</p>
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    </div>
-  </template>
-  
-  <script>
-  import { reactive, onMounted } from 'vue';
-  import ArtNet from 'artnet';
-  
-  export default {
-    name: 'ArtnetDisplay',
-    setup() {
-      const data = reactive({
-        distanceInCm: 0,
-        distanceInInches: 0,
-        errorMessage: ''
-      });
-  
-      const startReceiving = () => {
-        try {
-          const artnet = ArtNet({ host: '0.0.0.0', port: 6454 });
-  
-          artnet.on('artnet', (receivedData) => {
-            data.distanceInCm = receivedData[0] + (receivedData[1] << 8);
-            data.distanceInInches = receivedData[2] + (receivedData[3] << 8);
-          });
-  
-          artnet.on('error', (error) => {
-            data.errorMessage = `ArtNet error: ${error.message}`;
-            console.error('ArtNet error:', error);
-          });
-        } catch (error) {
-          data.errorMessage = `Initialization error: ${error.message}`;
-          console.error('Initialization error:', error);
-        }
+vueCopy<template>
+  <div>
+    <h1>センサーデータ</h1>
+    <p>距離: {{ distanceInCm.toFixed(2) }} cm</p>
+    <p>距離: {{ distanceInInches.toFixed(2) }} inches</p>
+    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+  </div>
+</template>
+
+<script>
+import { reactive, onMounted, onUnmounted } from 'vue';
+
+export default {
+  name: 'ArtnetDisplay',
+  setup() {
+    const data = reactive({
+      distanceInCm: 0,
+      distanceInInches: 0,
+      errorMessage: ''
+    });
+
+    let socket;
+
+    const startReceiving = () => {
+      socket = new WebSocket('ws://localhost:3000');
+
+      socket.onmessage = (event) => {
+        const { cm, inches } = JSON.parse(event.data);
+        data.distanceInCm = cm;
+        data.distanceInInches = inches;
       };
-  
-      onMounted(() => {
-        startReceiving();
-      });
-  
-      return {
-        ...data,
+
+      socket.onerror = (error) => {
+        data.errorMessage = `WebSocket error: ${error.message}`;
+        console.error('WebSocket error:', error);
       };
-    },
-  };
-  </script>
-  
-  <style scoped>
-  h1 {
-    color: #42b983;
-  }
-  .error {
-    color: red;
-  }
-  </style>
-  
+    };
+
+    onMounted(() => {
+      startReceiving();
+    });
+
+    onUnmounted(() => {
+      if (socket) {
+        socket.close();
+      }
+    });
+
+    return {
+      ...data,
+    };
+  },
+};
+</script>
+
+<style scoped>
+h1 {
+  color: #42b983;
+}
+.error {
+  color: red;
+}
+</style>

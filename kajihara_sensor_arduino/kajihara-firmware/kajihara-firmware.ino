@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <pins_arduino.h>
+#include <WebSocketClient.h>
 #include "ArtNet/ArtNetWifi.h"
 #include "config.h"
 
