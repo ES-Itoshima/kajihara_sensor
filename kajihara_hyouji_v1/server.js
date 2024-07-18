@@ -1,26 +1,25 @@
-const express = require('express');
-const http = require('http');
-const ArtNet = require('artnet');
-const socketIo = require('socket.io');
+import express from 'express';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import ArtNet from 'artnet';
 
-// Express サーバーの設定
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
 
 const artnet = ArtNet({ host: '0.0.0.0', port: 6454 });
 
-io.on('connection', (socket) => {
-  console.log('Socket.IO connection established');
+wss.on('connection', (ws) => {
+  console.log('WebSocket connection established');
 
   artnet.on('artnet', (data) => {
     const cm = data[0] + (data[1] << 8);
     const inches = data[2] + (data[3] << 8);
-    socket.emit('sensorData', { distanceInCm: cm, distanceInInches: inches });
+    ws.send(JSON.stringify({ distanceInCm: cm, distanceInInches: inches }));
   });
 
-  socket.on('disconnect', () => {
-    console.log('Socket.IO connection closed');
+  ws.on('close', () => {
+    console.log('WebSocket connection closed');
   });
 });
 

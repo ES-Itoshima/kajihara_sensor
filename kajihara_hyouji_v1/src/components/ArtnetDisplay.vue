@@ -1,9 +1,8 @@
 vueCopy<template>
   <div>
     <h1>センサーデータ</h1>
-    <!-- <p>距離: {{ distanceInCm.toFixed(2) }} cm</p> -->
-    <!-- <p>距離: {{ distanceInInches.toFixed(2) }} inches</p> -->
-    <p>距離: 12.000 cm</p>
+    <p>距離: {{ distanceInCm.toFixed(2) }} cm</p>
+    <p>距離: {{ distanceInInches.toFixed(2) }} inches</p>
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
   </div>
 </template>
@@ -23,7 +22,7 @@ export default {
     let socket;
 
     const startReceiving = () => {
-      socket = new WebSocket('ws://localhost:3000');
+      socket = new WebSocket('ws://localhost:8080');
 
       socket.onmessage = (event) => {
         const { cm, inches } = JSON.parse(event.data);

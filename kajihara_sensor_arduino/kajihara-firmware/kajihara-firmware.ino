@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <pins_arduino.h>
 #include "ArtNet/ArtNetWifi.h"
 #include "config.h"
