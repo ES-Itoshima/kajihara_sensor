@@ -1,28 +1,44 @@
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import ArtNet from 'artnet';
+import artnet from 'artnet-node';
 
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
-const artnet = ArtNet({ host: '0.0.0.0', port: 6454 });
+const artnetServer = artnet.Server.listen(6454); // Art-Netのデフォルトポート
 
-wss.on('connection', (ws) => {
-  console.log('WebSocket connection established');
+artnetServer.on('data', (data) => {
+  console.log('Received Art-Net packet:');
+  console.log('  Universe:', data.universe);
+  console.log('  Sequence:', data.sequence);
+  console.log('  Physical:', data.physical);
+  console.log('  Data:', data.data);
 
-  artnet.on('artnet', (data) => {
-    const cm = data[0] + (data[1] << 8);
-    const inches = data[2] + (data[3] << 8);
-    ws.send(JSON.stringify({ distanceInCm: cm, distanceInInches: inches }));
-  });
+  const cm = data.data[0] + (data.data[1] << 8);
+  const inches = data.data[2] + (data.data[3] << 8);
+  
+  console.log('  Parsed data:');
+  console.log('    Distance (cm):', cm);
+  console.log('    Distance (inches):', inches);
 
-  ws.on('close', () => {
-    console.log('WebSocket connection closed');
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ distanceInCm: cm, distanceInInches: inches }));
+      console.log('Sent data to WebSocket client');
+    }
   });
 });
 
+artnetServer.on('listening', () => {
+  console.log('Art-Net server listening on port 6454');
+});
+
+artnetServer.on('error', (error) => {
+  console.error('Art-Net server error:', error);
+});
+
 server.listen(8080, () => {
-  console.log('Server is running on http://localhost:8080');
+  console.log('WebSocket server is running on http://localhost:8080');
 });
