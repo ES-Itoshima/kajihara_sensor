@@ -1,18 +1,15 @@
 vueCopy<template>
   <div>
     <h1>センサーデータ</h1>
-    <p>距離: {{ distanceInCm.toFixed(2) }} cm</p>
-    <p>距離: {{ distanceInInches.toFixed(2) }} inches</p>
+    <p>距離: {{ data.distanceInCm}} cm</p>
+    <p>距離: {{ data.distanceInInches}} inches</p>
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
   </div>
 </template>
 
-<script>
+<script setup>
 import { reactive, onMounted, onUnmounted } from 'vue';
 
-export default {
-  name: 'ArtnetDisplay',
-  setup() {
     const data = reactive({
       distanceInCm: 0,
       distanceInInches: 0,
@@ -25,9 +22,10 @@ export default {
       socket = new WebSocket('ws://localhost:8080');
 
       socket.onmessage = (event) => {
-        const { cm, inches } = JSON.parse(event.data);
-        data.distanceInCm = cm;
-        data.distanceInInches = inches;
+        const { distanceInCm, distanceInInches } = JSON.parse(event.data);
+        data.distanceInCm = distanceInCm;
+        data.distanceInInches = distanceInInches;
+        console.log(event)
       };
 
       socket.onerror = (error) => {
@@ -45,12 +43,6 @@ export default {
         socket.close();
       }
     });
-
-    return {
-      ...data,
-    };
-  },
-};
 </script>
 
 <style scoped>
