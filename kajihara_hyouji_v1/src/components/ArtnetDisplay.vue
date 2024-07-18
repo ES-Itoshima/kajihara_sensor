@@ -1,16 +1,15 @@
-<!-- src/components/ArtnetDisplay.vue -->
-<template>
+vueCopy<template>
   <div>
     <h1>センサーデータ</h1>
-    <p>距離: {{ distanceInCm }} cm</p>
-    <p>距離: {{ distanceInInches }} inches</p>
+    <!-- <p>距離: {{ distanceInCm.toFixed(2) }} cm</p> -->
+    <!-- <p>距離: {{ distanceInInches.toFixed(2) }} inches</p> -->
+    <p>距離: 12.000 cm</p>
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
   </div>
 </template>
 
 <script>
-import { reactive, onMounted } from 'vue';
-import io from 'socket.io-client';
+import { reactive, onMounted, onUnmounted } from 'vue';
 
 export default {
   name: 'ArtnetDisplay',
@@ -21,30 +20,31 @@ export default {
       errorMessage: ''
     });
 
-    const startSocketIO = () => {
-      const socket = io('http://localhost:8080');
+    let socket;
 
-      socket.on('connect', () => {
-        console.log('Socket.IO connection established');
-      });
+    const startReceiving = () => {
+      socket = new WebSocket('ws://localhost:3000');
 
-      socket.on('sensorData', (receivedData) => {
-        data.distanceInCm = receivedData.distanceInCm;
-        data.distanceInInches = receivedData.distanceInInches;
-      });
+      socket.onmessage = (event) => {
+        const { cm, inches } = JSON.parse(event.data);
+        data.distanceInCm = cm;
+        data.distanceInInches = inches;
+      };
 
-      socket.on('disconnect', () => {
-        console.log('Socket.IO connection closed');
-      });
-
-      socket.on('error', (error) => {
-        data.errorMessage = `Socket.IO error: ${error.message}`;
-        console.error('Socket.IO error:', error);
-      });
+      socket.onerror = (error) => {
+        data.errorMessage = `WebSocket error: ${error.message}`;
+        console.error('WebSocket error:', error);
+      };
     };
 
     onMounted(() => {
-      startSocketIO();
+      startReceiving();
+    });
+
+    onUnmounted(() => {
+      if (socket) {
+        socket.close();
+      }
     });
 
     return {
