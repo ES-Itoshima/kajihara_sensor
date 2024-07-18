@@ -1,7 +1,7 @@
-const WebSocket = require('ws');
-const dgram = require('dgram');
+import { WebSocketServer } from 'ws';
+import dgram from 'dgram';
 
-const wss = new WebSocket.Server({ port: 3000 });
+const wss = new WebSocketServer({ port: 3000 });
 const udpServer = dgram.createSocket('udp4');
 
 udpServer.on('message', (msg, rinfo) => {
@@ -11,7 +11,7 @@ udpServer.on('message', (msg, rinfo) => {
   };
   
   wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocketServer.OPEN) {
       client.send(JSON.stringify(data));
     }
   });
